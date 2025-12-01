@@ -123,6 +123,17 @@ uvicorn app:app --reload
 python predict_test.py
 ```
 
+## 7. 한계점 및 향후 과제 (Limitations & Future Works)
+본 프로젝트는 YOLOv8 모델을 활용하여 야구 경기 영상을 효과적으로 분석하였으나, 현업 수준의 상용화를 위해서는 다음과 같은 기술적 한계의 극복이 필요합니다.
+
+### 1. 객체 간 혼동 (Class Confusion)
+* **문제점:** 정지 이미지(Frame) 단위의 탐지 방식을 사용하므로, 유니폼이 동일한 주자(Runner)와 수비수(Infielder)를 구분하는 데 일부 한계가 있습니다.
+* **개선 방안:** 향후 **Pose Estimation(자세 추정)** 기술을 도입하여 '달리는 자세'와 '수비 준비 자세'를 구분하거나, **Video Classification(LSTM/Transformer)** 기술을 적용하여 선수의 이동 경로(Vector)를 분석함으로써 역할을 특정할 계획입니다.
+
+### 2. 시스템 처리 속도 (System Latency)
+* **문제점:** 고화질의 장시간 동영상 업로드 시 서버의 동기(Synchronous) 처리 방식으로 인해 사용자의 대기 시간이 길어지는 현상이 발생합니다.
+* **개선 방안:** 추후 **Celery**와 **Redis**를 활용한 **비동기 작업 큐(Asynchronous Task Queue)** 아키텍처를 도입하여, 백그라운드에서 영상을 처리하고 사용자는 실시간 진행률을 확인할 수 있도록 고도화할 예정입니다.
+
 ### 폴더 구조(Directory Structure)
 ```
 kbo_baseball_image_analytics/
