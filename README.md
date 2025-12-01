@@ -16,9 +16,9 @@
 KBO 경기 영상에서 추출한 이미지를 사용하여 7개의 클래스로 라벨링하였습니다.
 
 ### 📌 클래스 분포 및 데이터 (Labels & Instances)
-학습 데이터의 클래스 분포와 객체 크기/위치 분포는 아래와 같습니다.
-
 ![Label Distribution](runs/style/labels.jpg)
+> **이미지 설명:** > * **좌측 상단 (Bar Chart):** 각 클래스별 데이터 개수를 보여줍니다. `judge`(심판), `pitcher`(투수) 등의 데이터가 많고, 상대적으로 `catcher`(포수) 등이 적은 분포를 확인할 수 있습니다.
+> * **우측 (Heatmap):** 이미지 내에서 객체(Bounding Box)들이 주로 위치하는 좌표와 크기 분포를 나타냅니다. 야구 경기 특성상 중앙에 객체가 집중되어 있음을 알 수 있습니다.
 
 | ID | Class Name | 설명 |
 |:---:|:---|:---|
@@ -39,12 +39,15 @@ KBO 경기 영상에서 추출한 이미지를 사용하여 7개의 클래스로
 * **Image Size:** 640
 
 ### 🖼️ 학습 데이터 예시 (Training Batches)
-모델이 학습 과정에서 실제로 입력받은 데이터 배치(Mosaic Augmentation 적용) 예시입니다.
 ![Train Batch](runs/style/train_batch0.jpg)
+> **이미지 설명:** > YOLOv8 학습 시 적용된 **Mosaic Augmentation** 결과입니다. 4장의 이미지를 합치고 크기를 조절하여 모델이 다양한 스케일과 배경에서도 객체를 잘 인식하도록 훈련시키는 과정입니다.
 
 ### 📈 학습 결과 그래프 (Training Results)
-학습 진행에 따른 Loss 감소와 성능 지표(Precision, Recall, mAP) 변화 추이입니다.
 ![Results](runs/style/results.png)
+> **이미지 설명:**
+> Epoch(학습 횟수) 진행에 따른 성능 변화 그래프입니다.
+> * **Train/Val Loss (좌측):** 학습이 진행될수록 손실값(오차)이 꾸준히 감소하며 모델이 안정적으로 학습되고 있음을 보여줍니다.
+> * **Metrics (우측):** Precision(정밀도), Recall(재현율), mAP(평균 정밀도) 지표가 우상향하며 성능이 개선되는 것을 확인할 수 있습니다.
 
 ---
 
@@ -52,31 +55,39 @@ KBO 경기 영상에서 추출한 이미지를 사용하여 7개의 클래스로
 검증 데이터셋(Validation Set)에 대한 정량적 평가 결과입니다.
 
 ### 📊 혼동 행렬 (Confusion Matrix)
-클래스별 예측 정확도를 시각화한 결과입니다. 특징이 뚜렷한 **투수, 타자, 포수** 클래스에서 특히 높은 정확도를 보입니다.
 ![Confusion Matrix](runs/style/confusion_matrix.png)
+> **이미지 설명:**
+> 모델의 예측 결과와 실제 정답(True Label)을 비교한 행렬입니다.
+> * **대각선 (진한 파란색):** 올바르게 예측한 비율입니다. `pitcher`, `batter`, `judge` 등 특징이 뚜렷한 클래스는 0.89 이상의 매우 높은 정확도를 보입니다.
+> * **비대각선:** 잘못 예측한 사례입니다. 예를 들어 `runner`가 `infielder`로 일부 오인식되는 경향 등을 파악할 수 있습니다.
 
 ### 📉 PR Curve & F1 Curve
-모델의 신뢰도(Confidence)에 따른 Precision-Recall 및 F1 Score 곡선입니다.
 <p align="center">
   <img src="runs/style/BoxPR_curve.png" width="48%" />
   <img src="runs/style/BoxF1_curve.png" width="48%" />
 </p>
 
+> **이미지 설명:**
+> * **PR Curve (좌측):** Precision과 Recall의 관계를 보여줍니다. 그래프 아래 면적(mAP)이 넓을수록 성능이 좋으며, 모든 클래스 평균 mAP@0.5가 **0.872**로 우수한 성능을 나타냅니다.
+> * **F1 Curve (우측):** Confidence Threshold에 따른 F1 Score 변화입니다. 신뢰도 0.488 부근에서 모든 클래스의 F1 점수가 최적화됨(0.82)을 보여줍니다.
+
 ---
 
 ## 5. 예측 결과 시각화 (Inference Examples)
-학습된 모델을 사용하여 실제 경기 장면을 추론한 결과입니다. 다중 객체(심판, 타자, 포수, 투수 등)가 혼재된 상황에서도 안정적으로 탐지하는 것을 확인할 수 있습니다.
+학습된 모델을 사용하여 실제 경기 장면을 추론한 결과입니다.
 
-### ✅ Validation Batch 예측 결과
 ![Val Batch 0](runs/style/val_batch0_pred.jpg)
 ![Val Batch 1](runs/style/val_batch1_pred.jpg)
 ![Val Batch 2](runs/style/val_batch2_pred.jpg)
+
+> **이미지 설명:**
+> 실제 검증 데이터에 대한 추론 결과입니다. 복잡한 경기 장면에서도 **투수(Pitcher), 타자(Batter), 심판(Judge), 주자(Runner)** 등이 각기 다른 색상의 박스로 정확하게 탐지되고 있음을 시각적으로 확인할 수 있습니다.
 
 ---
 
 ## 6. 설치 및 실행 (Installation & Usage)
 
 ### 1️⃣ 환경 설정
+필요한 라이브러리를 설치합니다.
 ```bash
-# 필수 패키지 설치
 pip install ultralytics fastapi uvicorn jinja2 python-multipart
