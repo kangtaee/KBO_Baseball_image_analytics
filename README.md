@@ -13,7 +13,7 @@
 ---
 ### 2. 데이터 저장소
 수집된 원본 데이터는 용량 문제로 인해 별도의 구글 드라이브에 저장하였다.(전체적인 프로젝트의 파이썬 및 데이터 등 전부 저장하였다.)
-* **대용량 데이터 저장소**: [Google Drive 링크]([https://drive.google.com/drive/folders/16iDWNRGRV3p_oI1JLGJ9MXyGEnriKlk8?hl=ko](https://drive.google.com/drive/folders/10lcZLXD1-XZkwJ-ZJTB438EHTcBR09DI?hl=ko))
+* **대용량 데이터 저장소**: [Google Drive 링크](https://drive.google.com/drive/folders/16iDWNRGRV3p_oI1JLGJ9MXyGEnriKlk8?hl=ko](https://drive.google.com/drive/folders/10lcZLXD1-XZkwJ-ZJTB438EHTcBR09DI?hl=ko))
 ## 2.2 데이터셋 및 클래스 (Dataset & Classes)
 KBO 경기 영상에서 추출한 이미지를 사용하여 7개의 클래스로 라벨링하였습니다.
 
