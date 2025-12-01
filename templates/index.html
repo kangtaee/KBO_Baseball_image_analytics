@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>야구 포지션 인식 연구 대시보드</title>
+
+  <!-- Bootstrap 5 -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  <style>
+    body {
+      background-color: #f3f4f6;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .navbar-brand span {
+      font-weight: 600;
+    }
+    .page-subtitle {
+      font-size: 0.9rem;
+      color: #6b7280;
+    }
+    .card {
+      border-radius: 12px;
+    }
+    .upload-area {
+      border-radius: 12px;
+      background: #ffffff;
+      border: 1px dashed #d1d5db;
+      padding: 16px 18px;
+    }
+    .upload-area.dragover {
+      border-color: #2563eb;
+      background-color: #eff6ff;
+    }
+    .upload-icon {
+      font-size: 2.2rem;
+    }
+    .scroll-table {
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    .scroll-table table {
+      margin-bottom: 0;
+    }
+    .result-img-wrapper {
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      background: #111827;
+      padding: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: auto;
+      max-height: 480px;
+    }
+    .result-img {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 8px;
+      transition: transform 0.15s ease-out;
+      transform-origin: center center;
+    }
+    .result-video {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 8px;
+    }
+    .metric-badge {
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      background-color: #eef2ff;
+      color: #4338ca;
+    }
+    .status-text {
+      min-height: 24px;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 상단 네비게이션 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <span class="me-2">⚾</span>
+      <span>야구 포지션 인식 연구 데모</span>
+    </a>
+    <div class="d-none d-md-flex align-items-center gap-3">
+      <span class="badge bg-secondary">
+        YOLOv8m · 7-class detector
+      </span>
+      <span class="badge bg-outline-light border border-light text-light">
+        Backend: FastAPI
+      </span>
+      <span class="badge bg-outline-light border border-light text-light">
+        Frontend: Bootstrap · jQuery · Ajax
+      </span>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid px-4 py-3">
+  <div class="row mb-3">
+    <div class="col-12 d-flex justify-content-between align-items-end flex-wrap gap-2">
+      <div>
+        <h4 class="mb-1">포지션 인식 실험 인터페이스</h4>
+        <div class="page-subtitle">
+          이미지 / 폴더 / 동영상 업로드 → 모델 추론 → 라벨/좌표/요약 확인 → 실험 결과 저장까지 한 번에 수행하는 연구용 UI
+        </div>
+      </div>
+      <div class="text-end">
+        <span class="metric-badge me-1">입력: Image · Folder · Video</span>
+        <span class="metric-badge me-1">출력: judge, batter, catcher, pitcher, infielder, outfielder, runner</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- 왼쪽 패널: 업로드 / 컨트롤 / 라벨 정보 -->
+    <div class="col-lg-4">
+      <!-- 업로드 영역 -->
+      <div class="upload-area mb-3" id="uploadArea">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <h6 class="mb-0">1. 입력 데이터 선택</h6>
+            <small class="text-muted">단일 이미지, 폴더(이미지 배치), 또는 동영상을 선택해 실험할 수 있습니다.</small>
+          </div>
+          <span class="upload-icon text-primary">📥</span>
+        </div>
+
+        <!-- 단일 이미지 -->
+        <label class="form-label small mb-1 text-muted">단일 이미지 선택</label>
+        <input type="file" id="imageInput" accept="image/*" class="form-control mb-1">
+        <div class="small text-muted mb-2" id="fileInfoText">선택된 파일 없음</div>
+
+        <!-- 폴더 업로드 모드 -->
+        <div class="border-top pt-2 mt-2">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <div>
+              <small class="text-muted fw-semibold">폴더 업로드 모드 (이미지 배치 실험)</small><br>
+              <small class="text-muted">한 번 선택 후 [다음] 버튼으로 순차적으로 이미지 예측 실행</small>
+            </div>
+          </div>
+          <input type="file" id="folderInput" webkitdirectory multiple
+                 class="form-control form-control-sm mb-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="small text-muted" id="folderInfoText">폴더 미선택</div>
+            <div class="btn-group btn-group-sm" role="group">
+              <button type="button" class="btn btn-outline-secondary" id="btnPrevFolder" disabled>이전</button>
+              <button type="button" class="btn btn-outline-secondary" id="btnNextFolder" disabled>다음</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 동영상 업로드 -->
+        <div class="border-top pt-2 mt-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <div>
+              <small class="text-muted fw-semibold">동영상 업로드 (연속 프레임 실험)</small><br>
+              <small class="text-muted">한 개의 동영상을 업로드하여 전체 프레임의 포지션 인식 요약을 확인합니다.</small>
+            </div>
+          </div>
+          <input type="file" id="videoInput" accept="video/*" class="form-control form-control-sm mb-1">
+          <div class="small text-muted mb-1" id="videoInfoText">선택된 동영상 없음</div>
+          <button id="btnPredictVideo" class="btn btn-outline-primary btn-sm w-100">
+            동영상 예측 실행
+          </button>
+        </div>
+
+        <!-- 컨트롤 버튼 -->
+        <div class="d-flex gap-2 mt-3">
+          <button id="btnPredict" class="btn btn-primary flex-grow-1">
+            이미지 예측 실행
+          </button>
+          <button id="btnClear" class="btn btn-outline-secondary">
+            초기화
+          </button>
+        </div>
+        <div class="mt-2 d-flex justify-content-between align-items-center">
+          <div class="status-text text-muted" id="statusText"></div>
+        </div>
+      </div>
+
+      <!-- 라벨/요약 테이블 -->
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+          <span>2. 예측 결과 (라벨 / 좌표 / 요약)</span>
+          <span class="badge rounded-pill bg-light text-dark border">
+            Detection / Summary Table
+          </span>
+        </div>
+        <div class="card-body scroll-table p-0">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+            <tr>
+              <th style="width: 6%;">#</th>
+              <th style="width: 30%;">클래스</th>
+              <th style="width: 16%;">Conf / Count</th>
+              <th style="width: 12%;">x1</th>
+              <th style="width: 12%;">y1</th>
+              <th style="width: 12%;">x2</th>
+              <th style="width: 12%;">y2</th>
+            </tr>
+            </thead>
+            <tbody id="resultTableBody">
+            <tr>
+              <td colspan="7" class="text-center text-muted py-3">
+                아직 예측 결과가 없습니다.
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 저장 버튼 (이미지 결과용) -->
+      <div class="card">
+        <div class="card-body py-2 d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fw-semibold mb-0">3. 실험 결과 저장 (이미지)</div>
+            <small class="text-muted">
+              현재 이미지 예측 결과를 연구 로그(saved_results.json)에 추가합니다.
+            </small>
+          </div>
+          <button id="btnSave" class="btn btn-outline-success" disabled>
+            저장하기
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 오른쪽 패널: 이미지/동영상 + 저장된 결과 목록 -->
+    <div class="col-lg-8">
+      <!-- 결과 시각화 -->
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+          <div>
+            <span>예측 시각화</span>
+            <small class="text-muted d-block" style="font-size: 0.8rem;">
+              이미지: Bounding box · 라벨 · confidence / 동영상: 프레임별 인식 결과 영상
+            </small>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <label for="zoomRange" class="form-label mb-0 small text-muted">Image Zoom</label>
+            <input type="range" id="zoomRange" min="50" max="200" value="100"
+                   class="form-range" style="width: 140px;">
+            <span id="zoomLabel" class="small text-muted">100%</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="result-img-wrapper">
+            <img id="resultImage" class="result-img d-none" alt="예측 결과 이미지">
+            <video id="resultVideo" class="result-video d-none" controls></video>
+            <span id="noImageText" class="text-muted">
+              좌측에서 이미지를 업로드하거나 폴더/동영상을 선택한 뒤 <strong>예측 실행</strong>을 눌러주세요.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 저장된 결과 목록 (이미지) -->
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+          <span>저장된 이미지 실험 결과 목록</span>
+          <button class="btn btn-sm btn-outline-secondary" type="button" onclick="refreshSavedTable()">
+            새로고침
+          </button>
+        </div>
+        <div class="card-body scroll-table p-0">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+            <tr>
+              <th style="width: 6%;">#</th>
+              <th style="width: 40%;">파일명</th>
+              <th style="width: 14%;">박스 개수</th>
+              <th style="width: 20%;">이미지</th>
+              <th style="width: 20%;">기타</th>
+            </tr>
+            </thead>
+            <tbody id="savedTableBody">
+            {% if saved_results and saved_results|length > 0 %}
+              {% for item in saved_results %}
+                <tr>
+                  <td>{{ loop.index }}</td>
+                  <td class="text-truncate" title="{{ item["original_filename"] }}">
+                    {{ item["original_filename"] }}
+                  </td>
+                  <td>{{ item["detections"]|length }}</td>
+                  <td>
+                    <a href="{{ item["input_image_url"] }}" target="_blank" class="link-primary">보기</a>
+                  </td>
+                  <td>
+                    <span class="badge bg-light text-dark border">
+                      ID: {{ item["id"][:8] }}…
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-3">
+                  아직 저장된 실험 결과가 없습니다.
+                </td>
+              </tr>
+            {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  let lastResult = null;           // 마지막 이미지 예측 결과 (저장용)
+  let currentZoom = 1.0;
+  let folderFiles = [];            // 폴더 모드에서 선택한 파일 리스트 (이미지)
+  let currentFolderIndex = -1;     // 현재 폴더 내 인덱스
+
+  // 상태 메시지 표시
+  function setStatus(text, isError = false) {
+    const $status = $('#statusText');
+    $status.text(text);
+    $status.removeClass('text-danger text-success');
+    if (isError) {
+      $status.addClass('text-danger');
+    } else if (text) {
+      $status.addClass('text-success');
+    }
+  }
+
+  // 결과 테이블 초기화
+  function clearTable() {
+    $('#resultTableBody').html(
+      '<tr><td colspan="7" class="text-center text-muted py-3">아직 예측 결과가 없습니다.</td></tr>'
+    );
+  }
+
+  // 폴더 정보 텍스트 및 버튼 상태 업데이트
+  function updateFolderInfo() {
+    const $info = $('#folderInfoText');
+    const $btnPrev = $('#btnPrevFolder');
+    const $btnNext = $('#btnNextFolder');
+
+    if (!folderFiles || folderFiles.length === 0) {
+      $info.text('폴더 미선택');
+      $btnPrev.prop('disabled', true);
+      $btnNext.prop('disabled', true);
+      return;
+    }
+
+    if (currentFolderIndex < 0) currentFolderIndex = 0;
+    if (currentFolderIndex >= folderFiles.length) currentFolderIndex = folderFiles.length - 1;
+
+    const currentFile = folderFiles[currentFolderIndex];
+    const total = folderFiles.length;
+
+    let folderName = '';
+    if (currentFile.webkitRelativePath) {
+      const parts = currentFile.webkitRelativePath.split('/');
+      if (parts.length > 1) {
+        folderName = parts[0];
+      }
+    }
+    const nameText = folderName
+      ? `폴더: ${folderName} · (${currentFolderIndex + 1}/${total})`
+      : `(${currentFolderIndex + 1}/${total})`;
+
+    $info.text(nameText + ` · 파일: ${currentFile.name}`);
+    $btnPrev.prop('disabled', currentFolderIndex <= 0);
+    $btnNext.prop('disabled', currentFolderIndex >= total - 1);
+  }
+
+  // 업로드 박스 드래그 & 드롭 효과 (이미지)
+  const $uploadArea = $('#uploadArea');
+  $uploadArea.on('dragover', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    $uploadArea.addClass('dragover');
+  });
+  $uploadArea.on('dragleave drop', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    $uploadArea.removeClass('dragover');
+  });
+  $uploadArea.on('drop', function (e) {
+    const files = e.originalEvent.dataTransfer.files;
+    if (files && files.length > 0) {
+      $('#imageInput')[0].files = files;
+      $('#fileInfoText').text('선택된 파일: ' + files[0].name);
+      // 폴더/동영상은 변경하지 않음
+    }
+  });
+
+  // 단일 이미지 선택 시
+  $('#imageInput').on('change', function () {
+    const file = this.files && this.files[0];
+    if (file) {
+      $('#fileInfoText').text('선택된 파일: ' + file.name);
+      // 단일 파일 선택하면 폴더 모드 초기화
+      folderFiles = [];
+      currentFolderIndex = -1;
+      updateFolderInfo();
+    } else {
+      $('#fileInfoText').text('선택된 파일 없음');
+    }
+  });
+
+  // 폴더 선택 시 (이미지 배치)
+  $('#folderInput').on('change', function () {
+    const files = Array.from(this.files || []);
+    folderFiles = files.filter(f => f.type.startsWith('image/'));
+    currentFolderIndex = 0;
+
+    $('#imageInput').val('');
+    $('#fileInfoText').text('선택된 파일 없음');
+
+    if (folderFiles.length === 0) {
+      $('#folderInfoText').text('폴더 내에서 사용할 수 있는 이미지가 없습니다.');
+    }
+    updateFolderInfo();
+    setStatus('폴더 모드 활성화: [다음] 버튼으로 순차 이미지 예측 가능합니다.');
+  });
+
+  // 이전 / 다음 버튼 (폴더 모드)
+  $('#btnPrevFolder').on('click', function () {
+    if (!folderFiles || folderFiles.length === 0) return;
+    if (currentFolderIndex > 0) {
+      currentFolderIndex--;
+      updateFolderInfo();
+      $('#btnPredict').click();
+    }
+  });
+
+  $('#btnNextFolder').on('click', function () {
+    if (!folderFiles || folderFiles.length === 0) return;
+    if (currentFolderIndex < folderFiles.length - 1) {
+      currentFolderIndex++;
+      updateFolderInfo();
+      $('#btnPredict').click();
+    }
+  });
+
+  // 동영상 선택 시
+  $('#videoInput').on('change', function () {
+    const file = this.files && this.files[0];
+    if (file) {
+      $('#videoInfoText').text('선택된 동영상: ' + file.name);
+    } else {
+      $('#videoInfoText').text('선택된 동영상 없음');
+    }
+  });
+
+  // 이미지 예측 버튼 클릭 (단일 + 폴더)
+  $('#btnPredict').on('click', function () {
+    const formData = new FormData();
+    let fileToSend = null;
+
+    // 폴더 모드 우선
+    if (folderFiles.length > 0 && currentFolderIndex >= 0 && currentFolderIndex < folderFiles.length) {
+      fileToSend = folderFiles[currentFolderIndex];
+    } else {
+      const fileInput = $('#imageInput')[0];
+      if (!fileInput.files || fileInput.files.length === 0) {
+        setStatus('먼저 이미지를 선택하거나 폴더를 지정해주세요.', true);
+        return;
+      }
+      fileToSend = fileInput.files[0];
+    }
+
+    formData.append('file', fileToSend);
+
+    const fileLabel = fileToSend.name || '선택된 이미지';
+    setStatus(`이미지 예측 중입니다: ${fileLabel}`, false);
+    $('#btnPredict').prop('disabled', true);
+    $('#btnSave').prop('disabled', true);
+    clearTable();
+
+    // 영상 뷰 끄고 이미지 모드로
+    $('#resultVideo').addClass('d-none').attr('src', '');
+    $('#resultImage').removeClass('d-none');
+    $('#noImageText').addClass('d-none');
+
+    $.ajax({
+      url: '/api/predict',
+      type: 'POST',
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function (res) {
+        lastResult = res;
+
+        $('#resultImage')
+          .attr('src', res.input_image_url + '?v=' + Date.now())
+          .removeClass('d-none');
+        $('#noImageText').addClass('d-none');
+
+        const $tbody = $('#resultTableBody');
+        $tbody.empty();
+
+        if (!res.detections || res.detections.length === 0) {
+          $tbody.append(
+            '<tr><td colspan="7" class="text-center text-muted py-3">감지된 객체가 없습니다.</td></tr>'
+          );
+        } else {
+          res.detections.forEach((det, idx) => {
+            const row = `
+              <tr>
+                <td>${idx + 1}</td>
+                <td>${det.class_name}</td>
+                <td>${det.confidence}</td>
+                <td>${det.x1}</td>
+                <td>${det.y1}</td>
+                <td>${det.x2}</td>
+                <td>${det.y2}</td>
+              </tr>
+            `;
+            $tbody.append(row);
+          });
+        }
+
+        if (folderFiles.length > 0) {
+          setStatus(
+            `이미지 예측 완료 (${currentFolderIndex + 1}/${folderFiles.length}) · ${fileLabel}`,
+            false
+          );
+        } else {
+          setStatus(`이미지 예측 완료 · ${fileLabel}`, false);
+        }
+
+        $('#btnSave').prop('disabled', false);
+      },
+      error: function (xhr) {
+        console.error(xhr);
+        setStatus('이미지 예측 중 오류가 발생했습니다.', true);
+      },
+      complete: function () {
+        $('#btnPredict').prop('disabled', false);
+      }
+    });
+  });
+
+  // ✅ 동영상 예측 버튼 클릭 (수정 버전)
+  $('#btnPredictVideo').on('click', function () {
+    const videoInput = $('#videoInput')[0];
+    if (!videoInput.files || videoInput.files.length === 0) {
+      setStatus('먼저 동영상을 선택해주세요.', true);
+      return;
+    }
+    const file = videoInput.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setStatus(`동영상 예측 중입니다: ${file.name} (길이에 따라 시간이 걸릴 수 있습니다)`, false);
+    $('#btnPredictVideo').prop('disabled', true);
+    clearTable();
+
+    // 이미지 뷰 끄고 동영상 모드로
+    $('#resultImage').addClass('d-none').attr('src', '');
+    $('#noImageText').addClass('d-none');
+
+    const $video = $('#resultVideo');
+    const videoEl = $video.get(0);
+    $video.removeClass('d-none');
+
+    // 이전 소스 제거
+    while (videoEl.firstChild) {
+      videoEl.removeChild(videoEl.firstChild);
+    }
+
+    $.ajax({
+      url: '/api/predict_video',
+      type: 'POST',
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function (res) {
+        console.log('video predict response:', res);
+
+        if (res.video_url) {
+          // <source> 태그를 새로 만들어서 video에 추가
+          const source = document.createElement('source');
+          source.src = res.video_url + '?v=' + Date.now();  // 캐싱 방지
+          source.type = 'video/mp4';
+          videoEl.appendChild(source);
+
+          // 로드 + 재생
+          videoEl.load();
+          videoEl.play().catch(err => {
+            console.log('자동 재생이 막혔을 수 있습니다:', err);
+          });
+        } else {
+          setStatus('서버에서 video_url을 반환하지 않았습니다.', true);
+        }
+
+        const $tbody = $('#resultTableBody');
+        $tbody.empty();
+
+        if (!res.summary || res.summary.length === 0) {
+          $tbody.append(
+            '<tr><td colspan="7" class="text-center text-muted py-3">감지된 객체가 없습니다.</td></tr>'
+          );
+        } else {
+          res.summary.forEach((item, idx) => {
+            const row = `
+              <tr>
+                <td>${idx + 1}</td>
+                <td>${item.class_name}</td>
+                <td>${item.count}</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+              </tr>
+            `;
+            $tbody.append(row);
+          });
+        }
+
+        setStatus(`동영상 예측 완료 · ${file.name}`, false);
+      },
+      error: function (xhr) {
+        console.error(xhr);
+        setStatus('동영상 예측 중 오류가 발생했습니다.', true);
+      },
+      complete: function () {
+        $('#btnPredictVideo').prop('disabled', false);
+      }
+    });
+  });
+
+  // 이미지 결과 저장 버튼
+  $('#btnSave').on('click', function () {
+    if (!lastResult) {
+      setStatus('저장할 이미지 예측 결과가 없습니다.', true);
+      return;
+    }
+
+    $.ajax({
+      url: '/api/save',
+      type: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify(lastResult),
+      success: function (res) {
+        setStatus('이미지 결과가 저장되었습니다. (총 ' + res.count + '개)', false);
+        $('#btnSave').prop('disabled', true);
+        refreshSavedTable();
+      },
+      error: function (xhr) {
+        console.error(xhr);
+        setStatus('저장 중 오류가 발생했습니다.', true);
+      }
+    });
+  });
+
+  // 저장된 결과 목록 새로고침 (이미지)
+  function refreshSavedTable() {
+    $.get('/api/saved', function (data) {
+      const results = data.results || [];
+      const $tbody = $('#savedTableBody');
+      $tbody.empty();
+
+      if (results.length === 0) {
+        $tbody.append(
+          '<tr><td colspan="5" class="text-center text-muted py-3">아직 저장된 실험 결과가 없습니다.</td></tr>'
+        );
+      } else {
+        results.forEach((item, idx) => {
+          const row = `
+            <tr>
+              <td>${idx + 1}</td>
+              <td class="text-truncate" title="${item.original_filename}">
+                ${item.original_filename}
+              </td>
+              <td>${item.detections.length}</td>
+              <td><a href="${item.input_image_url}" target="_blank" class="link-primary">보기</a></td>
+              <td><span class="badge bg-light text-dark border">ID: ${item.id.substring(0, 8)}…</span></td>
+            </tr>
+          `;
+          $tbody.append(row);
+        });
+      }
+    });
+  }
+
+  // 줌 슬라이더 (이미지용)
+  $('#zoomRange').on('input', function () {
+    const value = parseInt($(this).val(), 10);
+    currentZoom = value / 100.0;
+    $('#zoomLabel').text(value + '%');
+    $('#resultImage').css('transform', 'scale(' + currentZoom + ')');
+  });
+
+  // 초기화 버튼
+  $('#btnClear').on('click', function () {
+    $('#imageInput').val('');
+    $('#fileInfoText').text('선택된 파일 없음');
+
+    $('#folderInput').val('');
+    folderFiles = [];
+    currentFolderIndex = -1;
+    updateFolderInfo();
+
+    $('#videoInput').val('');
+    $('#videoInfoText').text('선택된 동영상 없음');
+
+    lastResult = null;
+    clearTable();
+
+    $('#resultImage').addClass('d-none').attr('src', '');
+    $('#resultVideo').addClass('d-none').attr('src', '');
+    $('#noImageText').removeClass('d-none');
+
+    $('#btnSave').prop('disabled', true);
+    setStatus('');
+  });
+</script>
+
+</body>
+</html>
