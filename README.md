@@ -86,8 +86,47 @@ KBO 경기 영상에서 추출한 이미지를 사용하여 7개의 클래스로
 ---
 
 ## 6. 설치 및 실행 (Installation & Usage)
-
-### 1️⃣ 환경 설정
-필요한 라이브러리를 설치합니다.
 ```bash
+1️⃣ 환경 설정
+필요한 라이브러리를 설치합니다.
+
 pip install ultralytics fastapi uvicorn jinja2 python-multipart
+
+2️⃣ 모델 학습 (Train)
+데이터셋을 준비하고 모델 학습을 시작합니다.
+
+python train.py
+
+3️⃣ 웹 대시보드 실행 (Web Demo)
+FastAPI 서버를 실행하여 웹 브라우저에서 직관적으로 모델을 테스트합니다.
+
+uvicorn app:app --reload
+접속 주소: http://127.0.0.1:8000
+기능: 이미지/동영상 업로드, 실시간 추론 확인, 결과 저장
+
+4️⃣ CLI 추론 (Inference)
+터미널 환경에서 대량의 데이터를 테스트할 때 사용합니다.
+
+# 테스트 데이터셋 전체 예측 및 평가
+python predict_test.py
+```
+
+### 폴더 구조(Directory Structure)
+```
+kbo_baseball_image_analytics/
+├── app.py                 # FastAPI 웹 서버 메인 코드
+├── train.py               # YOLOv8 모델 학습 스크립트
+├── predict_test.py        # 테스트 데이터셋 추론 스크립트
+├── predict_val.py         # 검증 데이터셋 추론 스크립트
+├── split_dataset.py       # 데이터셋 분할 유틸리티
+├── data.yaml              # 데이터셋 경로 및 클래스 설정 파일
+├── saved_results.json     # 웹 앱 분석 결과 저장 파일
+├── dataset/               # 원본 데이터셋 폴더 (images, labels)
+├── runs/                  # 학습 결과 및 모델 가중치 저장소
+│   └── style/             
+│       ├── weights/       # best.pt (최고 성능 모델), last.pt
+│       ├── results.png    # 학습 결과 그래프
+│       └── ...            # 각종 분석 이미지
+├── static/                # 웹 앱용 정적 파일 (CSS, 업로드 파일 등)
+└── templates/             # 웹 앱용 HTML 템플릿 (index.html)
+```
