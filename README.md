@@ -83,7 +83,8 @@ KBO 중계 하이라이트 영상에서 다양한 구장 환경과 방송사 앵
 ![Confusion Matrix](runs/style/confusion_matrix.png)
 > **분석:**
 > * **성공**: `Pitcher`, `Batter`, `Judge`는 90% 이상의 높은 정확도로 완벽하게 구분합니다.
-> * **한계**: `Runner`와 `Infielder` 간의 일부 혼동이 발생합니다. 이는 두 포지션이 동일한 유니폼을 입고 유사한 자세로 서 있는 경우가 많기 때문입니다. 향후 위치 정보(Diamond 내/외)를 활용한 보정 로직이 필요합니다.
+> * **한계**: `Runner`와 `Infielder` 간의 일부 혼동이 발생합니다. 이는 두 포지션이 동일한 유니폼을 입고 유사한 자세로 서 있는 경우가 많기 때문입니다.
+> * **개선책**: 이미지 기반 탐지의 한계를 극복하기 위해, 향후 **'Diamond 내/외 위치 좌표'**를 활용한 룰 기반 보정(Rule-based Correction)을 추가할 예정입니다.
 
 ### 4.3 PR Curve & F1 Curve
 <p align="center">
@@ -154,6 +155,7 @@ python predict_test.py
 * **개선 방안:**
     * **Pose Estimation (자세 추정):** '전력 질주하는 자세'와 '수비 준비 자세'를 구분하는 스켈레톤 기반 분석 도입.
     * **Video Classification:** LSTM이나 Transformer 모델을 적용하여 선수의 **이동 경로(Vector)**와 시간적 움직임을 분석함으로써 역할을 명확히 특정할 계획입니다.
+    * **Data Expansion:** 향후 10,000장 이상의 대규모 데이터셋을 구축하여 모델의 일반화 성능을 강화할 계획입니다.
 
 #### 2️⃣ 대용량 영상 처리 속도 개선 (System Latency)
 * **문제점:** 고화질의 장시간 동영상 업로드 시, 서버의 동기(Synchronous) 처리 방식으로 인해 사용자의 대기 시간이 길어지는 병목 현상이 발생합니다.
