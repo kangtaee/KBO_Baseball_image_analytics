@@ -80,6 +80,8 @@ KBO 중계 하이라이트 영상에서 다양한 구장 환경과 방송사 앵
 * **Precision**: 0.89 (높은 정밀도)
 
 ### 4.2 혼동 행렬 분석 (Confusion Matrix)
+> **데이터 분할 비율:** split_dataset.py 파일을 보면 데이터를 나눌 때 검증(Validation) 데이터셋의 비율을 20% (val_ratio=0.2) 로 설정했습니다.
+
 ![Confusion Matrix](runs/style/confusion_matrix.png)
 > **분석:**
 > * **성공**: `Pitcher`, `Batter`, `Judge`는 90% 이상의 높은 정확도로 완벽하게 구분합니다.
